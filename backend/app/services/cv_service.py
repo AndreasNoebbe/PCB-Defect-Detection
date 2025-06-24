@@ -1,42 +1,45 @@
-#!/usr/bin/env python3
-"""
-YOLO-based PCB Defect Detection Service
-"""
-
-import cv2
-import numpy as np
-from typing import List, Dict
 import time
 import os
+from pathlib import Path
+from typing import Dict
 
 class YOLOPCBDefectDetector:
     def __init__(self):
-        self.model_path = "models/ai_models/pcb_yolo_model.pt"
         self.model = None
         self.class_names = [
             'missing_hole', 'mouse_bite', 'open_circuit',
             'short', 'spur', 'spurious_copper'
         ]
-        self.severity_map = {
-            'missing_hole': 'critical',
-            'mouse_bite': 'major', 
-            'open_circuit': 'critical',
-            'short': 'critical',
-            'spur': 'minor',
-            'spurious_copper': 'major'
-        }
-        self.load_model()
+        self.find_and_load_model()
         print("🎯 YOLO PCB Defect Detector initialized")
     
-    def load_model(self):
+    def find_and_load_model(self):
+        # Try multiple possible paths
+        possible_paths = [
+            "models/ai_models/pcb_yolo_model.pt",
+            "app/models/ai_models/pcb_yolo_model.pt", 
+            "../models/ai_models/pcb_yolo_model.pt",
+            "./models/ai_models/pcb_yolo_model.pt"
+        ]
+        
+        model_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                print(f"📁 Found model at: {path}")
+                break
+        
+        if not model_path:
+            print("❌ Model not found at any expected location:")
+            for path in possible_paths:
+                print(f"  Checked: {path} - {os.path.exists(path)}")
+            self.model = None
+            return
+        
         try:
             from ultralytics import YOLO
-            if os.path.exists(self.model_path):
-                self.model = YOLO(self.model_path)
-                print("✅ YOLO model loaded successfully!")
-            else:
-                print(f"⚠️ Model not found: {self.model_path}")
-                self.model = None
+            self.model = YOLO(model_path)
+            print("✅ YOLO model loaded successfully!")
         except Exception as e:
             print(f"❌ Error loading model: {e}")
             self.model = None
@@ -44,11 +47,10 @@ class YOLOPCBDefectDetector:
     def detect_defects(self, image_path: str) -> Dict:
         start_time = time.time()
         
+        if self.model is None:
+            return self._fallback()
+        
         try:
-            if self.model is None:
-                return self._fallback_detection()
-            
-            # Run YOLO inference with optimal confidence from your tests
             results = self.model(image_path, conf=0.2, verbose=False)
             
             defects = []
@@ -59,18 +61,15 @@ class YOLOPCBDefectDetector:
                         confidence = float(box.conf[0])
                         x1, y1, x2, y2 = box.xyxy[0].tolist()
                         
-                        defect_type = self.class_names[class_id]
-                        severity = self.severity_map.get(defect_type, 'major')
-                        
-                        defects.append({
-                            "type": defect_type,
-                            "confidence": round(confidence, 3),
-                            "bbox": [int(x1), int(y1), int(x2-x1), int(y2-y1)],
-                            "severity": severity
-                        })
-            
-            # Sort by confidence
-            defects.sort(key=lambda x: x['confidence'], reverse=True)
+                        if class_id < len(self.class_names):
+                            defect_type = self.class_names[class_id]
+                            
+                            defects.append({
+                                "type": defect_type,
+                                "confidence": round(confidence, 3),
+                                "bbox": [int(x1), int(y1), int(x2-x1), int(y2-y1)],
+                                "severity": "critical" if defect_type in ["missing_hole", "open_circuit", "short"] else "major"
+                            })
             
             processing_time = int((time.time() - start_time) * 1000)
             
@@ -84,19 +83,18 @@ class YOLOPCBDefectDetector:
             }
         
         except Exception as e:
-            print(f"❌ YOLO error: {e}")
-            return self._fallback_detection()
+            print(f"❌ Detection error: {e}")
+            return self._fallback()
     
-    def _fallback_detection(self):
+    def _fallback(self):
         return {
             "defect_detected": False,
             "defects": [],
             "defect_count": 0,
             "confidence_score": 0.0,
             "processing_time_ms": 50,
-            "ai_model": "fallback-no-yolo"
+            "ai_model": "fallback-no-model"
         }
 
-# Backward compatibility
 PCBDefectDetector = YOLOPCBDefectDetector
 DefectDetector = YOLOPCBDefectDetector
