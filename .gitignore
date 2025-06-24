@@ -1,0 +1,40 @@
+# Virtual environments
+venv/
+env/
+
+# Node modules  
+node_modules/
+
+# Large datasets and models
+backend/PCB_DATASET/
+backend/PCB_YOLO_Dataset/ 
+backend/pcb-defects.zip
+backend/*.pt
+backend/app/models/ai_models/*.pt
+
+# Build directories
+frontend/build/
+
+# Database files
+*.db
+*.sqlite
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large image files
+*.jpg
+*.jpeg
+*.png
+
+# Uploads
+uploads/
+# All model files
+*.pth
+*.pt
+weights/
