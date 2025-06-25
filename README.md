@@ -8,6 +8,9 @@ An intelligent quality control system that uses computer vision and deep learnin
 
 **Experience the system live at:** [andedam.dev](https://andedam.dev)
 
+**Test Sample Image:** ![test_pcb](https://github.com/user-attachments/assets/0ff10c75-c4b2-4419-a3dc-9eb16c57d871)
+
+
 > **Note:** First-time loading may take 30-60 seconds due to free hosting tier limitations.
 
 ## Features
